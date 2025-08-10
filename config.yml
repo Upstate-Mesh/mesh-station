@@ -1,0 +1,3 @@
+serial_port: "/dev/cu.usbserial-54730053431"
+weather_channel_index: 0
+weather_interval_seconds: 3600

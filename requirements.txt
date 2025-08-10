@@ -1,0 +1,5 @@
+meshtastic
+protobuf
+PyYAML
+pypubsub
+black
