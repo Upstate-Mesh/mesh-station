@@ -30,18 +30,66 @@ def on_receive(packet, interface):
 
 def on_connection(interface, topic=pub.AUTO_TOPIC):
     print("[System] Serial connected!")
-    threading.Thread(
-        target=do_weather,
-        args=(
-            interface,
-            config["weather_channel_index"],
-            config["weather_interval_seconds"],
-        ),
-        daemon=True,
-    ).start()
+
+    if config["ad_enabled"] is True:
+        threading.Thread(
+            target=ad,
+            args=(
+                interface,
+                config["ad_channel_index"],
+                config["ad_interval_seconds"],
+                config["ad_text"],
+            ),
+            daemon=True,
+        ).start()
+
+    if config["beacon_enabled"] is True:
+        threading.Thread(
+            target=beacon,
+            args=(
+                interface,
+                config["beacon_channel_index"],
+                config["beacon_interval_seconds"],
+                config["beacon_text"],
+            ),
+            daemon=True,
+        ).start()
+
+    if config["weather_enabled"] is True:
+        threading.Thread(
+            target=weather,
+            args=(
+                interface,
+                config["weather_channel_index"],
+                config["weather_interval_seconds"],
+            ),
+            daemon=True,
+        ).start()
 
 
-def do_weather(interface, channel_index, interval):
+def ad(interface, channel_index, interval, text):
+    print("[System] Ad enabled.")
+
+    while True:
+        print(f"[Sending] '{text}' on channel '{channel_index}'")
+        interface.sendText(text, channelIndex=channel_index)
+
+        time.sleep(interval)
+
+
+def beacon(interface, channel_index, interval, text):
+    print("[System] Beacon enabled.")
+
+    while True:
+        print(f"[Sending] '{text}' on channel '{channel_index}'")
+        interface.sendText(text, channelIndex=channel_index)
+
+        time.sleep(interval)
+
+
+def weather(interface, channel_index, interval):
+    print("[System] Weather enabled.")
+
     while True:
         try:
             response = requests.get(API_URL, timeout=10)
