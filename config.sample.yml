@@ -1,0 +1,16 @@
+serial_port: "/dev/ttyACM0"
+ad_channel_index: 0
+ad_enabled: false
+ad_interval_seconds: 10800
+ad_text: "Join our growing local user group! http://www.example.com"
+beacon_channel_index: 1
+beacon_enabled: true
+beacon_interval_seconds: 1800
+beacon_text: "Beep!"
+weather_channel_index: 2
+weather_enabled: true
+weather_interval_seconds: 3600
+weather_home_assistant_base: "http://homeassistant.local:8123/"
+weather_humidity_entity_id: "sensor.aaaa_humidity"
+weather_temp_entity_id: "sensor.aaaa_temperature"
+

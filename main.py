@@ -1,12 +1,14 @@
 import meshtastic.serial_interface
 import time
 from pubsub import pub
+import os
 import threading
 import yaml
 import requests
+from dotenv import load_dotenv
 
-API_URL = "https://weatherjawn.com/api/current?zone=ALB&units=us"
 CONFIG_FILE = "config.yml"
+HA_PATH = "/api/states/"
 
 
 def load_config():
@@ -62,6 +64,8 @@ def on_connection(interface, topic=pub.AUTO_TOPIC):
                 interface,
                 config["weather_channel_index"],
                 config["weather_interval_seconds"],
+                config["weather_temp_entity_id"],
+                config["weather_humidity_entity_id"],
             ),
             daemon=True,
         ).start()
@@ -72,7 +76,7 @@ def ad(interface, channel_index, interval, text):
 
     while True:
         print(f"[Sending] '{text}' on channel '{channel_index}'")
-        interface.sendText(text, channelIndex=channel_index)
+        # interface.sendText(text, channelIndex=channel_index)
 
         time.sleep(interval)
 
@@ -82,29 +86,41 @@ def beacon(interface, channel_index, interval, text):
 
     while True:
         print(f"[Sending] '{text}' on channel '{channel_index}'")
-        interface.sendText(text, channelIndex=channel_index)
+        # interface.sendText(text, channelIndex=channel_index)
 
         time.sleep(interval)
 
 
-def weather(interface, channel_index, interval):
+def get_ha_sensor_state(entity_id):
+    ha_base = config["weather_home_assistant_base"]
+    ha_token = os.getenv("HA_TOKEN")
+
+    headers = {
+        "Authorization": f"Bearer {ha_token}",
+        "Content-Type": "application/json",
+    }
+    url = f"{ha_base}/api/states/{entity_id}"
+
+    response = requests.get(url, headers=headers, timeout=10)
+    response.raise_for_status()
+    data = response.json()
+    return {
+        "state": data.get("state"),
+        "unit": data["attributes"].get("unit_of_measurement"),
+    }
+
+
+def weather(interface, channel_index, interval, temp_entity_id, humidity_entity_id):
     print("[System] Weather enabled.")
 
     while True:
         try:
-            response = requests.get(API_URL, timeout=10)
-            response.raise_for_status()
+            temp_data = get_ha_sensor_state(temp_entity_id)
+            temp = round(float(temp_data["state"]))
+            humidity_data = get_ha_sensor_state(humidity_entity_id)
+            humidity = round(float(humidity_data["state"]))
 
-            data = response.json()
-
-            current_conditions = data.get("currentConditions", {})
-            conditions = current_conditions.get("conditions", "unknown")
-            temp = current_conditions.get("temp", "unknown")
-            feels_like = current_conditions.get("feelslike", "unknown")
-            weather = (
-                f"Currently in Albany, {conditions}. {temp}F. Feels like {feels_like}F."
-            )
-
+            weather = f"Currently in Albany, {temp}{temp_data['unit']}. Humidity {humidity}{humidity_data['unit']}."
             print(f"[Sending] '{weather}' on channel '{channel_index}'")
             interface.sendText(weather, channelIndex=channel_index)
         except requests.exceptions.RequestException as e:
@@ -114,6 +130,7 @@ def weather(interface, channel_index, interval):
 
 
 if __name__ == "__main__":
+    load_dotenv()
     config = load_config()
 
     pub.subscribe(on_receive, "meshtastic.receive")

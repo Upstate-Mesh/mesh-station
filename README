@@ -1,5 +1,5 @@
 # Mesh Station
 
-A LoRa-based weather station beacon powered by Meshtastic.
+A Meshtastic/LoRa-based bot for beaconing, announcements, and weather condition reporting for Home Assistant connected sensors
 
-Very much early on work-in-progress thing powered by Weatherjawn.com for the time being.
+Very much early on work-in-progress thing. A more thorough README will be forthcoming.
