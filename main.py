@@ -76,7 +76,7 @@ def ad(interface, channel_index, interval, text):
 
     while True:
         print(f"[Sending] '{text}' on channel '{channel_index}'")
-        # interface.sendText(text, channelIndex=channel_index)
+        interface.sendText(text, channelIndex=channel_index)
 
         time.sleep(interval)
 
@@ -86,7 +86,7 @@ def beacon(interface, channel_index, interval, text):
 
     while True:
         print(f"[Sending] '{text}' on channel '{channel_index}'")
-        # interface.sendText(text, channelIndex=channel_index)
+        interface.sendText(text, channelIndex=channel_index)
 
         time.sleep(interval)
 
