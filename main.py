@@ -6,6 +6,9 @@ import threading
 import yaml
 import requests
 from dotenv import load_dotenv
+import metpy.calc as mpcalc
+from metpy.units import units
+import math
 
 CONFIG_FILE = "config.yml"
 HA_PATH = "/api/states/"
@@ -118,9 +121,15 @@ def weather(interface, channel_index, interval, temp_entity_id, humidity_entity_
             temp_data = get_ha_sensor_state(temp_entity_id)
             temp = round(float(temp_data["state"]))
             humidity_data = get_ha_sensor_state(humidity_entity_id)
-            humidity = round(float(humidity_data["state"]))
+            humidity = float(humidity_data["state"])
+            heat_index = mpcalc.heat_index(temp * units.degF, humidity * units.percent)
 
-            weather = f"Currently in Albany, {temp}{temp_data['unit']}. Humidity {humidity}{humidity_data['unit']}."
+            feels_like = temp
+            # account for heat index not differing enough from air temp
+            if not math.isnan(float(heat_index.m)):
+                feels_like = round(float(heat_index.m))
+
+            weather = f"Currently in Albany, {temp}{temp_data['unit']}. Feels like {feels_like}{temp_data['unit']}. Humidity {round(humidity)}{humidity_data['unit']}."
             print(f"[Sending] '{weather}' on channel '{channel_index}'")
             interface.sendText(weather, channelIndex=channel_index)
         except requests.exceptions.RequestException as e:
