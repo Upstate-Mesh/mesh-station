@@ -20,7 +20,7 @@ A Meshtastic/LoRa-based bot for beaconing, announcements, and weather condition 
 
 ### Example sent messages
 
-<img src="./example.jpg" alt="Example" width="350" height="auto">
+<img src="./example.jpg" alt="Example" width="300" height="auto">
 
 ## Security and privacy
 
