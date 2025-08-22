@@ -1,6 +1,6 @@
 <img src="./logo.png" alt="Mesh Station Logo" width="400" height="auto">
 
-A Meshtastic/LoRa-based bot for beaconing, announcements, and weather condition reporting with Home Assistant connected sensors. Fully configurable to have as many or as few channel outputs of any type you'd like.
+A Meshtastic/LoRa-based bot for automating general messages, beaconing, and weather condition reporting with Home Assistant connected sensors. Fully configurable to have as many or as few channel outputs of any type you'd like.
 
 ## Requirements
 
