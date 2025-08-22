@@ -33,65 +33,41 @@ def on_receive(packet, interface):
         print(f"[System] Error decoding packet: {e}")
 
 
-def on_connection(interface, topic=pub.AUTO_TOPIC):
-    print("[System] Serial connected!")
-
-    if config["ad_enabled"] is True:
-        threading.Thread(
-            target=ad,
-            args=(
-                interface,
-                config["ad_channel_index"],
-                config["ad_interval_seconds"],
-                config["ad_text"],
-            ),
-            daemon=True,
-        ).start()
-
-    if config["beacon_enabled"] is True:
-        threading.Thread(
-            target=beacon,
-            args=(
-                interface,
-                config["beacon_channel_index"],
-                config["beacon_interval_seconds"],
-                config["beacon_text"],
-            ),
-            daemon=True,
-        ).start()
-
-    if config["weather_enabled"] is True:
-        threading.Thread(
-            target=weather,
-            args=(
-                interface,
-                config["weather_channel_index"],
-                config["weather_interval_seconds"],
-                config["weather_temp_entity_id"],
-                config["weather_humidity_entity_id"],
-            ),
-            daemon=True,
-        ).start()
-
-
-def ad(interface, channel_index, interval, text):
-    print("[System] Ad enabled.")
+def beacon_worker(interface, job):
+    print(f"[System] Beacon job started on channel {job['channel_index']}")
 
     while True:
-        print(f"[Sending] '{text}' on channel '{channel_index}'")
-        interface.sendText(text, channelIndex=channel_index)
+        interface.sendText(job["text"], channelIndex=job["channel_index"])
+        print(f"[Sending] Beacon: '{job['text']}' on channel {job['channel_index']}")
+        time.sleep(job["interval"])
 
-        time.sleep(interval)
 
-
-def beacon(interface, channel_index, interval, text):
-    print("[System] Beacon enabled.")
+def weather_worker(interface, job):
+    print(f"[System] Weather job started on channel {job['channel_index']}")
 
     while True:
-        print(f"[Sending] '{text}' on channel '{channel_index}'")
-        interface.sendText(text, channelIndex=channel_index)
+        try:
+            temp_data = get_ha_sensor_state(job["temp_entity_id"])
+            temp = round(float(temp_data["state"]))
+            humidity_data = get_ha_sensor_state(job["humidity_entity_id"])
+            humidity = float(humidity_data["state"])
+            heat_index = mpcalc.heat_index(temp * units.degF, humidity * units.percent)
 
-        time.sleep(interval)
+            feels_like = temp
+            if not math.isnan(float(heat_index.m)):
+                feels_like = round(float(heat_index.m))
+
+            msg = (
+                f"Currently in {job['location_description']}, {temp}{temp_data['unit']}. "
+                f"Feels like {feels_like}{temp_data['unit']}. "
+                f"Humidity {round(humidity)}{humidity_data['unit']}."
+            )
+            interface.sendText(msg, channelIndex=job["channel_index"])
+            print(f"[Sending] Weather: '{msg}' on channel {job['channel_index']}")
+        except requests.exceptions.RequestException as e:
+            print(f"[System] Weather job request failed: {e}")
+
+        time.sleep(job["interval"])
 
 
 def get_ha_sensor_state(entity_id):
@@ -113,29 +89,30 @@ def get_ha_sensor_state(entity_id):
     }
 
 
-def weather(interface, channel_index, interval, temp_entity_id, humidity_entity_id):
-    print("[System] Weather enabled.")
+def on_connection(interface, topic=pub.AUTO_TOPIC):
+    print("[System] Serial connected!")
+    start_jobs(interface, config)
 
-    while True:
-        try:
-            temp_data = get_ha_sensor_state(temp_entity_id)
-            temp = round(float(temp_data["state"]))
-            humidity_data = get_ha_sensor_state(humidity_entity_id)
-            humidity = float(humidity_data["state"])
-            heat_index = mpcalc.heat_index(temp * units.degF, humidity * units.percent)
 
-            feels_like = temp
-            # account for heat index not differing enough from air temp
-            if not math.isnan(float(heat_index.m)):
-                feels_like = round(float(heat_index.m))
+JOB_DISPATCH = {
+    "beacon": beacon_worker,
+    "weather": weather_worker,
+}
 
-            weather = f"Currently in Albany, {temp}{temp_data['unit']}. Feels like {feels_like}{temp_data['unit']}. Humidity {round(humidity)}{humidity_data['unit']}."
-            print(f"[Sending] '{weather}' on channel '{channel_index}'")
-            interface.sendText(weather, channelIndex=channel_index)
-        except requests.exceptions.RequestException as e:
-            print(f"[System] Request failed: {e}")
 
-        time.sleep(interval)
+def start_jobs(interface, config):
+    for job in config.get("outputs", []):
+        if not job.get("active", True):
+            print(f"[System] Job inactive: {job_type}, skipping")
+            continue
+
+        job_type = job.get("type")
+        worker = JOB_DISPATCH.get(job_type)
+
+        if worker:
+            threading.Thread(target=worker, args=(interface, job), daemon=True).start()
+        else:
+            print(f"[System] Unknown job type: {job_type}")
 
 
 if __name__ == "__main__":

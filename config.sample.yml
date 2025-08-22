@@ -1,16 +1,23 @@
 serial_port: "/dev/ttyACM0"
-ad_channel_index: 0
-ad_enabled: false
-ad_interval_seconds: 10800
-ad_text: "Join our growing local user group! http://www.example.com"
-beacon_channel_index: 1
-beacon_enabled: true
-beacon_interval_seconds: 1800
-beacon_text: "Beep!"
-weather_channel_index: 2
-weather_enabled: true
-weather_interval_seconds: 3600
-weather_home_assistant_base: "http://homeassistant.local:8123/"
-weather_humidity_entity_id: "sensor.aaaa_humidity"
-weather_temp_entity_id: "sensor.aaaa_temperature"
+weather_home_assistant_base: "http://homeassistant.local:8123"
 
+outputs:
+  - type: "beacon"
+    active: false
+    channel_index: 0
+    interval: 10800
+    text: "Come join our local Discord! https://www.example.com"
+
+  - type: "beacon"
+    active: true
+    channel_index: 0
+    interval: 1800
+    text: "Node active!"
+
+  - type: "weather"
+    active: false
+    channel_index: 1
+    interval: 3600
+    temp_entity_id: "sensor.outside_temperature"
+    humidity_entity_id: "sensor.outside_humidity"
+    location_description: "Tau Ceti Center"
