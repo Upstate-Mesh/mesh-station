@@ -14,7 +14,8 @@ A Meshtastic/LoRa-based bot for automating general messages, beaconing, and weat
 * Connect your device via USB.
 * One time: `cp config.sample.yml config.yml`
 * One time: `pip3 install -r requirements.tsx`
-* As needed: Edit `config.yml` to have the worker jobs you desire.
+* One time if you want to integrate with Home Assistant sensors: Create and Edit `.env` and add `HA_TOKEN=YOUR_API_TOKEN_HERE`
+* As needed: Edit `config.yml` to have the worker jobs and messages you desire.
 * Run `python3 main.py`
 * Enjoy!
 
