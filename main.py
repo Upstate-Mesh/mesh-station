@@ -9,6 +9,8 @@ from dotenv import load_dotenv
 import metpy.calc as mpcalc
 from metpy.units import units
 import math
+from loguru import logger
+import numpy
 
 CONFIG_FILE = "config.yml"
 HA_PATH = "/api/states/"
@@ -28,22 +30,24 @@ def on_receive(packet, interface):
 
         if portnum == "TEXT_MESSAGE_APP":
             text = decoded.get("text", "")
-            print(f"[Received from {fromId} to {toId}] {text}")
+            logger.info(f"<- from {fromId} to {toId}: {text}")
     except Exception as e:
-        print(f"[System] Error decoding packet: {e}")
+        logger.error(f"Error decoding packet: {e}")
 
 
 def beacon_worker(interface, job):
-    print(f"[System] Beacon job started on channel {job['channel_index']}")
+    logger.info(f"Beacon job started on channel {job['channel_index']}")
 
     while True:
         interface.sendText(job["text"], channelIndex=job["channel_index"])
-        print(f"[Sending] Beacon: '{job['text']}' on channel {job['channel_index']}")
+        logger.info(
+            f"-> Beacon: '{job['text']}' on channel {job['channel_index']}"
+        )
         time.sleep(job["interval"])
 
 
 def weather_worker(interface, job):
-    print(f"[System] Weather job started on channel {job['channel_index']}")
+    logger.info(f"Weather job started on channel {job['channel_index']}")
 
     while True:
         try:
@@ -54,8 +58,10 @@ def weather_worker(interface, job):
             heat_index = mpcalc.heat_index(temp * units.degF, humidity * units.percent)
 
             feels_like = temp
-            if not math.isnan(float(heat_index.m)):
-                feels_like = round(float(heat_index.m))
+            magnitude = heat_index.m
+
+            if not numpy.ma.is_masked(magnitude) and not math.isnan(float(magnitude)):
+                feels_like = round(float(magnitude))
 
             msg = (
                 f"Currently in {job['location_description']}, {temp}{temp_data['unit']}. "
@@ -63,9 +69,9 @@ def weather_worker(interface, job):
                 f"Humidity {round(humidity)}{humidity_data['unit']}."
             )
             interface.sendText(msg, channelIndex=job["channel_index"])
-            print(f"[Sending] Weather: '{msg}' on channel {job['channel_index']}")
+            logger.info(f"-> Weather: '{msg}' on channel {job['channel_index']}")
         except requests.exceptions.RequestException as e:
-            print(f"[System] Weather job request failed: {e}")
+            logger.info(f"Weather job request failed: {e}")
 
         time.sleep(job["interval"])
 
@@ -90,7 +96,7 @@ def get_ha_sensor_state(entity_id):
 
 
 def on_connection(interface, topic=pub.AUTO_TOPIC):
-    print("[System] Serial connected!")
+    logger.info("Serial connected!")
     start_jobs(interface, config)
 
 
@@ -102,32 +108,36 @@ JOB_DISPATCH = {
 
 def start_jobs(interface, config):
     for job in config.get("outputs", []):
+        job_type = job.get("type")
+
         if not job.get("active", True):
-            print(f"[System] Job inactive: {job_type}, skipping")
+            logger.info(f"Job inactive: {job_type}, skipping")
             continue
 
-        job_type = job.get("type")
         worker = JOB_DISPATCH.get(job_type)
 
         if worker:
+            logger.info("Sleeping 1 second to space out jobs.")
+            time.sleep(1)
             threading.Thread(target=worker, args=(interface, job), daemon=True).start()
         else:
-            print(f"[System] Unknown job type: {job_type}")
+            logger.warning(f"Unknown job type: {job_type}")
 
 
 if __name__ == "__main__":
+    logger.add("mesh_station.log", rotation="50 MB")
     load_dotenv()
     config = load_config()
 
     pub.subscribe(on_receive, "meshtastic.receive")
     pub.subscribe(on_connection, "meshtastic.connection.established")
 
-    print(f"[System] Connecting to Meshtastic device via '{config['serial_port']}'.")
+    logger.info(f"Connecting to Meshtastic device via '{config['serial_port']}'.")
     interface = meshtastic.serial_interface.SerialInterface(config["serial_port"])
 
     try:
         while True:
             time.sleep(1)
     except KeyboardInterrupt:
-        print("[System] Closing connection.")
+        logger.info("Closing connection, shutting down.")
         interface.close()
