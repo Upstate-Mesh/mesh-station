@@ -34,17 +34,23 @@ def on_receive(packet, interface):
         if not text:
             return
 
-        from_id = packet["fromId"]
-        logger.info(f"<- from {from_id}: {text}")
+        from_id = packet.get("fromId")
+        my_id = interface.myInfo.my_node_num
+
+        # only reply to DMs
+        if packet.get("channel", 0) != 0 or from_id == my_id:
+            return
 
         cmd = text.strip().lower()
+        if cmd not in COMMANDS:
+            logger.debug(f"<- Unrecognized command from {from_id} ({cmd}), ignoring.")
+            return
 
-        if cmd in COMMANDS:
-            reply_text = COMMANDS[cmd]
-            logger.info(f"-> to {from_id} with: {reply_text}")
-            interface.sendText(reply_text, destinationId=from_id)
-        else:
-            logger.debug("Unknown command, ignoring")
+        logger.info(f"<- from {from_id}: {cmd}")
+
+        reply_text = COMMANDS[cmd]
+        logger.info(f"-> to {from_id}: {reply_text}")
+        interface.sendText(reply_text, destinationId=from_id)
     except Exception as e:
         logger.error(f"Error decoding packet: {e}")
 
@@ -109,6 +115,8 @@ def get_ha_sensor_state(entity_id):
 
 def on_connection(interface, topic=pub.AUTO_TOPIC):
     logger.info("Serial connected!")
+
+    pub.subscribe(on_receive, "meshtastic.receive")
     start_jobs(interface, config)
 
 
@@ -141,7 +149,6 @@ if __name__ == "__main__":
     load_dotenv()
     config = load_config()
 
-    pub.subscribe(on_receive, "meshtastic.receive")
     pub.subscribe(on_connection, "meshtastic.connection.established")
 
     logger.info(f"Connecting to Meshtastic device via '{config['serial_port']}'.")
