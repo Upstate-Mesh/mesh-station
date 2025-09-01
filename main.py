@@ -14,6 +14,11 @@ import numpy
 
 CONFIG_FILE = "config.yml"
 HA_PATH = "/api/states/"
+COMMANDS = {
+    ".about": "I'm a sentient Meshtastic bot 🤖",
+    ".help": "Available commands: .about .help .ping",
+    ".ping": "pong!",
+}
 
 
 def load_config():
@@ -24,13 +29,22 @@ def load_config():
 def on_receive(packet, interface):
     try:
         decoded = packet.get("decoded", {})
-        fromId = packet.get("fromId", "unknown")
-        toId = packet.get("toId", "unknown")
-        portnum = decoded.get("portnum")
+        text = decoded.get("text")
 
-        if portnum == "TEXT_MESSAGE_APP":
-            text = decoded.get("text", "")
-            logger.info(f"<- from {fromId} to {toId}: {text}")
+        if not text:
+            return
+
+        from_id = packet["fromId"]
+        logger.info(f"<- from {from_id}: {text}")
+
+        cmd = text.strip().lower()
+
+        if cmd in COMMANDS:
+            reply_text = COMMANDS[cmd]
+            logger.info(f"-> to {from_id} with: {reply_text}")
+            interface.sendText(reply_text, destinationId=from_id)
+        else:
+            logger.debug("Unknown command, ignoring")
     except Exception as e:
         logger.error(f"Error decoding packet: {e}")
 
@@ -40,9 +54,7 @@ def beacon_worker(interface, job):
 
     while True:
         interface.sendText(job["text"], channelIndex=job["channel_index"])
-        logger.info(
-            f"-> Beacon: '{job['text']}' on channel {job['channel_index']}"
-        )
+        logger.info(f"-> Beacon: '{job['text']}' on channel {job['channel_index']}")
         time.sleep(job["interval"])
 
 
