@@ -6,3 +6,5 @@ pypubsub
 python-dotenv
 black
 loguru
+pysqlite3
+isort

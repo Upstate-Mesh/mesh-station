@@ -1,3 +1,4 @@
+save_node_db: true
 serial_port: "/dev/ttyACM0"
 weather_home_assistant_base: "http://homeassistant.local:8123"
 

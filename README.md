@@ -1,13 +1,16 @@
-<img src="./logo.png" alt="Mesh Station Logo" width="400" height="auto">
+<img src="./logo.png" alt="Meshy Logo" width="400" height="auto">
 
-A Meshtastic/LoRa-based bot for automating general messages, beaconing, and weather condition reporting with Home Assistant connected sensors. Fully configurable to have as many or as few channel outputs of any type you'd like.
+Meshy is a Meshtastic/LoRa-based bot for scheduled interval workers with general messages, beaconing, and weather condition reporting via Home Assistant connected sensors. Fully configurable to have as many or as few channel outputs of any type you'd like on a schedule.
+
+Also has support for commands which respond to DMs with a string or a function call. Optionally also keeps a SQLite DB of "seen" nodes for you to use in bot commands or interval workers.
 
 ## Requirements
 
 * A meshtastic device connected to the machine you intend to run the script on, with any required USB serial drivers pre-installed.
 * Something unix-ish to run the script on (Linux, Mac OS etc). It might work in windows but ymmv. 
 * Python 3 and Pip 3.
-* Probably something to keep the script running in the background e.g. `tmux`, `screen`, `pm2` etc.
+* SQLite3 headers (generally `libsqlite3-dev`).
+* Probably something to keep the script running in the background e.g. `tmux`, `screen`, `pm2`, or write your own service daemon.
 
 ## Usage
 

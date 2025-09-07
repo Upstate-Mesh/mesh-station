@@ -1,16 +1,19 @@
-import meshtastic.serial_interface
-import time
-from pubsub import pub
+import math
 import os
 import threading
-import yaml
-import requests
-from dotenv import load_dotenv
+import time
+
+import meshtastic.serial_interface
 import metpy.calc as mpcalc
-from metpy.units import units
-import math
-from loguru import logger
 import numpy
+import requests
+import yaml
+from dotenv import load_dotenv
+from loguru import logger
+from metpy.units import units
+from pubsub import pub
+
+from db import NodeDB
 
 CONFIG_FILE = "config.yml"
 HA_PATH = "/api/states/"
@@ -21,6 +24,9 @@ class Meshy:
         logger.add("meshy.log", rotation="50 MB")
         load_dotenv()
         self.config = self.load_config()
+
+        if self.config["save_node_db"]:
+            self.db = NodeDB()
 
     def start(self):
         logger.info(
@@ -43,6 +49,9 @@ class Meshy:
             return yaml.safe_load(f)
 
     def on_receive(self, packet, interface):
+        if self.db is not None:
+            self.observe_node(packet, interface)
+
         if self.config["bot"]["active"] is False:
             return
 
@@ -73,6 +82,22 @@ class Meshy:
             interface.sendText(reply_text, destinationId=from_id)
         except Exception as e:
             logger.error(f"Command error: {e}")
+
+    def observe_node(self, packet, interface):
+        try:
+            from_id = packet.get("fromId", "unknown")
+            portnum = packet.get("decoded", {}).get("portnum")
+
+            if portnum != "NODEINFO_APP":
+                return
+
+            node = interface.nodes.get(from_id)
+            if node:
+                short_name = getattr(node, "shortName", "")
+                long_name = getattr(node, "longName", "")
+                self.db.upsert_node(from_id, short_name, long_name)
+        except Exception as e:
+            logger.error(f"Error decoding packet: {e}")
 
     def handle_command(self, cmd):
         action = self.config["bot"]["commands"][cmd]
