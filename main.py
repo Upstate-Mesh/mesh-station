@@ -92,9 +92,9 @@ class Meshy:
                 return
 
             node = interface.nodes.get(from_id)
-            if node:
-                short_name = getattr(node, "shortName", "")
-                long_name = getattr(node, "longName", "")
+            if node and "user" in node and "longName" in node["user"]:
+                short_name = node["user"]["shortName"]
+                long_name = node["user"]["longName"]
                 self.db.upsert_node(from_id, short_name, long_name)
         except Exception as e:
             logger.error(f"Error decoding packet: {e}")
@@ -188,6 +188,7 @@ class Meshy:
         logger.info("Serial connected!")
 
         pub.subscribe(self.on_receive, "meshtastic.receive")
+
         self.start_jobs(interface)
 
     def start_jobs(self, interface):

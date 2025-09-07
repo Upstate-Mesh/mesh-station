@@ -62,7 +62,7 @@ class NodeDB:
                     (new_short, new_long, datetime.utcnow(), last4),
                 )
                 logger.info(
-                    f"Updated node already seen: {new_short}/{new_long} ({last4})"
+                    f"Updated node already seen: {new_long}/{new_short} ({last4})"
                 )
             else:
                 c.execute(
