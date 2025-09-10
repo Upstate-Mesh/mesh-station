@@ -8,3 +8,5 @@ black
 loguru
 pysqlite3
 isort
+croniter
+yamlfix

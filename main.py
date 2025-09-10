@@ -14,6 +14,7 @@ from metpy.units import units
 from pubsub import pub
 
 from db import NodeDB
+from scheduled_worker import ScheduledWorker
 
 CONFIG_FILE = "config.yml"
 HA_PATH = "/api/states/"
@@ -116,27 +117,22 @@ class Meshy:
     def beacon_worker(self, interface, job):
         logger.info(f"Beacon job started on channel {job['channel_index']}")
 
-        while True:
-            interface.sendText(job["text"], channelIndex=job["channel_index"])
-            logger.info(f"-> Beacon: '{job['text']}' on channel {job['channel_index']}")
-            time.sleep(job["interval"])
+        interface.sendText(job["text"], channelIndex=job["channel_index"])
+        logger.info(f"-> Beacon: '{job['text']}' on channel {job['channel_index']}")
 
     def weather_worker(self, interface, job):
         logger.info(f"Weather job started on channel {job['channel_index']}")
 
-        while True:
-            try:
-                msg = self.get_weather_conditions(
-                    job["temp_entity_id"],
-                    job["humidity_entity_id"],
-                    job["location_description"],
-                )
-                interface.sendText(msg, channelIndex=job["channel_index"])
-                logger.info(f"-> Weather: '{msg}' on channel {job['channel_index']}")
-            except requests.exceptions.RequestException as e:
-                logger.info(f"Weather job request failed: {e}")
-
-            time.sleep(job["interval"])
+        try:
+            msg = self.get_weather_conditions(
+                job["temp_entity_id"],
+                job["humidity_entity_id"],
+                job["location_description"],
+            )
+            interface.sendText(msg, channelIndex=job["channel_index"])
+            logger.info(f"-> Weather: '{msg}' on channel {job['channel_index']}")
+        except requests.exceptions.RequestException as e:
+            logger.info(f"Weather job request failed: {e}")
 
     def get_bot_weather_conditions(self):
         return self.get_weather_conditions(
@@ -202,11 +198,9 @@ class Meshy:
             worker = getattr(self, job.get("dispatch"))
 
             if worker:
-                logger.info("Sleeping 1 second to space out jobs.")
-                time.sleep(1)
-                threading.Thread(
-                    target=worker, args=(interface, job), daemon=True
-                ).start()
+                cron = job.get("cron")
+                ScheduledWorker(cron, worker, interface, job).start()
+                logger.info(f"Job started in thread on cron: {cron}")
             else:
                 logger.warning(f"Unknown job type: {job_type}")
 

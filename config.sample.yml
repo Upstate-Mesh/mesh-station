@@ -1,37 +1,35 @@
+---
 save_node_db: true
-serial_port: "/dev/ttyACM0"
-weather_home_assistant_base: "http://homeassistant.local:8123"
-
+serial_port: /dev/ttyACM0
+weather_home_assistant_base: http://homeassistant.local:8123
 bot:
   active: true
-  temp_entity_id: "sensor.outside_temperature"
-  humidity_entity_id: "sensor.outside_humidity"
-  location_description: "City of Poets, Hyperion"
+  temp_entity_id: sensor.outside_temperature
+  humidity_entity_id: sensor.outside_humidity
+  location_description: City of Poets, Hyperion
   commands:
-    .about: "I'm a Meshtastic bot 🤖"
-    .conditions: "get_bot_weather_conditions"
-    .help: "Available commands: .about .conditions .help .ping"
-    .ping: "pong!"
-
+    .about: I'm a Meshtastic bot 🤖
+    .conditions: get_bot_weather_conditions
+    .help: 'Available commands: .about .conditions .help .ping'
+    .ping: pong!
 interval_workers:
-  - type: "beacon"
-    active: false
-    channel_index: 0
-    dispatch: "beacon_worker"
-    interval: 10800
-    text: "Come join our local Discord! https://www.example.com"
-
-  - type: "beacon"
+  - type: beacon
     active: true
     channel_index: 0
-    dispatch: "weather_worker"
-    interval: 1800
-    text: "Node active!"
-
-  - type: "weather"
+    cron: 0 0,12 * * *
+    dispatch: beacon_worker
+    text: Come join our local Discord! https://www.example.com
+  - type: beacon
+    active: true
+    channel_index: 1
+    cron: 0 * * * *
+    dispatch: beacon_worker
+    text: Node active!
+  - type: weather
     active: false
     channel_index: 1
-    interval: 3600
-    temp_entity_id: "sensor.outside_temperature"
-    humidity_entity_id: "sensor.outside_humidity"
-    location_description: "Tau Ceti Center"
+    cron: 0 * * * *
+    dispatch: weather_worker
+    temp_entity_id: sensor.outside_temperature
+    humidity_entity_id: sensor.outside_humidity
+    location_description: Tau Ceti Center

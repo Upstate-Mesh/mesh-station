@@ -6,3 +6,4 @@ run:
 format:
 	black .
 	isort --profile black .
+	yamlfix .
