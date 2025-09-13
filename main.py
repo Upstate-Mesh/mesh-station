@@ -57,7 +57,7 @@ class Meshy:
             return
 
         my_id = interface.myInfo.my_node_num
-        my_id_encoded = f'!{my_id:08x}'
+        my_id_encoded = f"!{my_id:08x}"
 
         try:
             decoded = packet.get("decoded", {})
@@ -204,7 +204,7 @@ class Meshy:
             if worker:
                 cron = job.get("cron")
                 ScheduledWorker(cron, worker, interface, job).start()
-                logger.info(f"Job started in thread on cron: {cron}")
+                logger.info(f"{job_type} job started in thread with schedule: {cron}")
             else:
                 logger.warning(f"Unknown job type: {job_type}")
 
