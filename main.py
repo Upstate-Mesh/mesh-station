@@ -56,23 +56,26 @@ class Meshy:
         if self.config["bot"]["active"] is False:
             return
 
+        my_id = interface.myInfo.my_node_num
+        my_id_encoded = f'!{my_id:08x}'
+
         try:
             decoded = packet.get("decoded", {})
-            text = decoded.get("text")
+            from_id = packet.get("fromId")
+            to_id = packet.get("toId")
+
+            # only reply to DMs
+            if to_id != my_id_encoded or from_id == my_id_encoded:
+                return
+
+            text = decoded.get("text", "")
 
             if not text:
                 return
 
-            from_id = packet.get("fromId")
-            my_id = interface.myInfo.my_node_num
-
-            # only reply to DMs
-            if packet.get("channel", 0) != 0 or from_id == my_id:
-                return
-
             cmd = text.strip().lower()
             reply_text = self.handle_command(cmd)
-            if not reply_text:
+            if reply_text is None:
                 logger.debug(
                     f"<- Unrecognized command from {from_id} ({cmd}), ignoring."
                 )
@@ -101,7 +104,8 @@ class Meshy:
             logger.error(f"Error decoding packet: {e}")
 
     def handle_command(self, cmd):
-        action = self.config["bot"]["commands"][cmd]
+        commands = self.config.get("bot", {}).get("commands", {})
+        action = commands.get(cmd)
 
         if action is None:
             return None
