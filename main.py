@@ -121,17 +121,13 @@ class Meshy:
 
         return reply_text
 
-    def beacon_worker(self, interface, job):
-        logger.info(f"Beacon job started on channel {job['channel_index']}")
-
+    def get_beacon_worker(self, interface, job):
         interface.sendText(job["text"], channelIndex=job["channel_index"])
         logger.info(f"-> Beacon: '{job['text']}' on channel {job['channel_index']}")
 
-    def weather_worker(self, interface, job):
-        logger.info(f"Weather job started on channel {job['channel_index']}")
-
+    def get_weather_conditions_worker(self, interface, job):
         try:
-            msg = self.get_weather_conditions(
+            msg = self.get_conditions(
                 job["temp_entity_id"],
                 job["humidity_entity_id"],
                 job["location_description"],
@@ -154,16 +150,37 @@ class Meshy:
         n = seen_nodes[0]
         return f"Most recently seen node:\n{n['long_name']} / {n['short_name']} / {n['id']}"
 
-    def get_bot_weather_conditions(self):
-        return self.get_weather_conditions(
+    def get_weather_forecast(self):
+        weather_config = self.config.get("weather").get("forecast")
+        url = weather_config.get("url")
+        user_agent = weather_config.get("user_agent")
+
+        headers = {
+            "Content-Type": "application/json",
+            "User-Agent": user_agent,
+        }
+
+        response = requests.get(url, headers=headers, timeout=10)
+        response.raise_for_status()
+        data = response.json()
+
+        periods = data.get("properties", {}).get("periods", [])
+        if len(periods) == 0:
+            return "Forecast unavailable."
+
+        period = periods[0]
+        name = period.get("name")
+        detailed_forecast = period.get("detailedForecast")
+        return f"{name}: {detailed_forecast}"
+
+    def get_weather_conditions(self):
+        return self.get_conditions(
             self.config["bot"]["temp_entity_id"],
             self.config["bot"]["humidity_entity_id"],
             self.config["bot"]["location_description"],
         )
 
-    def get_weather_conditions(
-        self, temp_entity_id, humidity_entity_id, location_description
-    ):
+    def get_conditions(self, temp_entity_id, humidity_entity_id, location_description):
         temp_data = self.get_ha_sensor_state(temp_entity_id)
         temp = round(float(temp_data["state"]))
         humidity_data = self.get_ha_sensor_state(humidity_entity_id)
@@ -183,7 +200,7 @@ class Meshy:
         )
 
     def get_ha_sensor_state(self, entity_id):
-        ha_base = self.config["weather_home_assistant_base"]
+        ha_base = self.config["home_assistant_base"]
         ha_token = os.getenv("HA_TOKEN")
 
         headers = {
@@ -210,7 +227,7 @@ class Meshy:
     def start_jobs(self, interface):
         self.worker_jobs = []
 
-        for job in self.config.get("interval_workers", []):
+        for job in self.config.get("workers", []):
             job_type = job.get("type")
 
             if not job.get("active", True):
