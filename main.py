@@ -43,6 +43,9 @@ class Meshy:
                 time.sleep(1)
         except KeyboardInterrupt:
             logger.info("Closing connection, shutting down.")
+
+            for worker_job in self.worker_jobs:
+                worker_job.stop()
             interface.close()
 
     def load_config(self):
@@ -138,6 +141,19 @@ class Meshy:
         except requests.exceptions.RequestException as e:
             logger.info(f"Weather job request failed: {e}")
 
+    def get_seen_nodes(self):
+        if self.db is None:
+            return "Command inactive."
+
+        seen_nodes = self.db.get_seen_nodes()
+
+        if len(seen_nodes) == 0:
+            return "No nodes seen."
+
+        # TODO make this useful
+        n = seen_nodes[0]
+        return f"Most recently seen node:\n{n['long_name']} / {n['short_name']} / {n['id']}"
+
     def get_bot_weather_conditions(self):
         return self.get_weather_conditions(
             self.config["bot"]["temp_entity_id"],
@@ -192,6 +208,8 @@ class Meshy:
         self.start_jobs(interface)
 
     def start_jobs(self, interface):
+        self.worker_jobs = []
+
         for job in self.config.get("interval_workers", []):
             job_type = job.get("type")
 
@@ -203,7 +221,9 @@ class Meshy:
 
             if worker:
                 cron = job.get("cron")
-                ScheduledWorker(cron, worker, interface, job).start()
+                threaded_worker = ScheduledWorker(cron, worker, interface, job)
+                threaded_worker.start()
+                self.worker_jobs.append(threaded_worker)
                 logger.info(f"{job_type} job started in thread with schedule: {cron}")
             else:
                 logger.warning(f"Unknown job type: {job_type}")

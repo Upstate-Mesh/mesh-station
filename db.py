@@ -76,3 +76,20 @@ class NodeDB:
 
         conn.commit()
         conn.close()
+
+    def get_seen_nodes(self):
+        conn = self._get_conn()
+        c = conn.cursor()
+
+        c.execute("SELECT id, short_name, long_name FROM nodes ORDER BY last_seen DESC")
+        rows = c.fetchall()
+        return [
+            {
+                "id": row[0],
+                "short_name": row[1],
+                "long_name": row[2],
+            }
+            for row in rows
+        ]
+
+        conn.close()
