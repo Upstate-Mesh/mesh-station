@@ -127,15 +127,23 @@ class Meshy:
 
     def get_weather_conditions_worker(self, interface, job):
         try:
-            msg = self.get_conditions(
-                job["temp_entity_id"],
-                job["humidity_entity_id"],
-                job["location_description"],
-            )
+            msg = self.get_weather_conditions()
             interface.sendText(msg, channelIndex=job["channel_index"])
-            logger.info(f"-> Weather: '{msg}' on channel {job['channel_index']}")
+            logger.info(
+                f"-> Weather conditions: '{msg}' on channel {job['channel_index']}"
+            )
         except requests.exceptions.RequestException as e:
-            logger.info(f"Weather job request failed: {e}")
+            logger.info(f"Weather conditions job request failed: {e}")
+
+    def get_weather_forecast_worker(self, interface, job):
+        try:
+            msg = self.get_weather_forecast()
+            interface.sendText(msg, channelIndex=job["channel_index"])
+            logger.info(
+                f"-> Weather forecast: '{msg}' on channel {job['channel_index']}"
+            )
+        except requests.exceptions.RequestException as e:
+            logger.info(f"Weather forecast job request failed: {e}")
 
     def get_seen_nodes(self):
         if self.db is None:
@@ -169,21 +177,20 @@ class Meshy:
             return "Forecast unavailable."
 
         period = periods[0]
-        name = period.get("name")
+        name = period.get("name").lower()
         detailed_forecast = period.get("detailedForecast")
-        return f"{name}: {detailed_forecast}"
+        return f"NWS forecast for {name}: {detailed_forecast}"
 
     def get_weather_conditions(self):
-        return self.get_conditions(
-            self.config["bot"]["temp_entity_id"],
-            self.config["bot"]["humidity_entity_id"],
-            self.config["bot"]["location_description"],
-        )
+        conditions_config = self.config.get("weather").get("conditions")
+        temp_entity_id = conditions_config.get("temp_entity_id")
+        humidity_entity_id = conditions_config.get("humidity_entity_id")
+        location_description = conditions_config.get("location_description")
+        ha_url = conditions_config.get("url")
 
-    def get_conditions(self, temp_entity_id, humidity_entity_id, location_description):
-        temp_data = self.get_ha_sensor_state(temp_entity_id)
+        temp_data = self.get_ha_sensor_state(ha_url, temp_entity_id)
         temp = round(float(temp_data["state"]))
-        humidity_data = self.get_ha_sensor_state(humidity_entity_id)
+        humidity_data = self.get_ha_sensor_state(ha_url, humidity_entity_id)
         humidity = float(humidity_data["state"])
         heat_index = mpcalc.heat_index(temp * units.degF, humidity * units.percent)
 
@@ -199,8 +206,7 @@ class Meshy:
             f"Humidity {round(humidity)}{humidity_data['unit']}."
         )
 
-    def get_ha_sensor_state(self, entity_id):
-        ha_base = self.config["home_assistant_base"]
+    def get_ha_sensor_state(self, ha_base, entity_id):
         ha_token = os.getenv("HA_TOKEN")
 
         headers = {

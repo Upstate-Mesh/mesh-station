@@ -10,3 +10,4 @@ pysqlite3
 isort
 croniter
 yamlfix
+mdformat

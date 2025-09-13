@@ -1,21 +1,22 @@
 ---
 save_node_db: true
 serial_port: /dev/ttyACM0
-home_assistant_base: http://homeassistant.local:8123
 weather:
+  conditions:
+    humidity_entity_id: sensor.outdoor_humidity
+    location_description: City of Poets, Hyperion
+    temp_entity_id: sensor.outdoor_temperature
+    url: http://homeassistant.local:8123
   forecast:
     url: https://api.weather.gov/gridpoints/ALY/72,63/forecast
     user_agent: (example.com, example@example.com)
 bot:
   active: true
-  temp_entity_id: sensor.outside_temperature
-  humidity_entity_id: sensor.outside_humidity
-  location_description: City of Poets, Hyperion
   commands:
     .about: I'm a Meshtastic bot 🤖
     .conditions: get_weather_conditions
     .forecast: get_weather_forecast
-    .help: 'Available commands: .about .conditions .forecast .help .ping'
+    .help: 'Available commands: .about .conditions .forecast .help .ping .seen'
     .ping: pong!
     .seen: get_seen_nodes
 workers:
@@ -25,17 +26,13 @@ workers:
     cron: 0 0,12 * * *
     dispatch: get_beacon_worker
     text: Come join our local Discord! https://www.example.com
-  - type: beacon
-    active: true
-    channel_index: 1
-    cron: 0 * * * *
-    dispatch: beacon_worker
-    text: Node active!
   - type: weather_conditions
     active: false
-    channel_index: 1
+    channel_index: 0
     cron: 0 * * * *
     dispatch: get_weather_conditions_worker
-    temp_entity_id: sensor.outside_temperature
-    humidity_entity_id: sensor.outside_humidity
-    location_description: Tau Ceti Center
+  - type: weather_forecast
+    active: true
+    channel_index: 0
+    cron: 0 7,18 * * *
+    dispatch: get_weather_forecast_worker
