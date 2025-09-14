@@ -8,3 +8,4 @@ format:
 	isort --profile black .
 	yamlfix .
 	mdformat .
+	pylint --rcfile .pylintrc --recursive=y ./

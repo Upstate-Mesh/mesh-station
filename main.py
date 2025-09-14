@@ -1,6 +1,5 @@
 import math
 import os
-import threading
 import time
 
 import meshtastic.serial_interface
@@ -17,7 +16,6 @@ from db import NodeDB
 from scheduled_worker import ScheduledWorker
 
 CONFIG_FILE = "config.yml"
-HA_PATH = "/api/states/"
 
 
 class Meshy:
@@ -25,6 +23,7 @@ class Meshy:
         logger.add("meshy.log", rotation="50 MB")
         load_dotenv()
         self.config = self.load_config()
+        self.worker_jobs = []
 
         if self.config["save_node_db"]:
             self.db = NodeDB()
@@ -49,7 +48,7 @@ class Meshy:
             interface.close()
 
     def load_config(self):
-        with open(CONFIG_FILE, "r") as f:
+        with open(CONFIG_FILE, "r", encoding="utf-8") as f:
             return yaml.safe_load(f)
 
     def on_receive(self, packet, interface):
@@ -223,7 +222,7 @@ class Meshy:
             "unit": data["attributes"].get("unit_of_measurement"),
         }
 
-    def on_connection(self, interface, topic=pub.AUTO_TOPIC):
+    def on_connection(self, interface):
         logger.info("Serial connected!")
 
         pub.subscribe(self.on_receive, "meshtastic.receive")
@@ -231,8 +230,6 @@ class Meshy:
         self.start_jobs(interface)
 
     def start_jobs(self, interface):
-        self.worker_jobs = []
-
         for job in self.config.get("workers", []):
             job_type = job.get("type")
 

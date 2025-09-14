@@ -83,6 +83,8 @@ class NodeDB:
 
         c.execute("SELECT id, short_name, long_name FROM nodes ORDER BY last_seen DESC")
         rows = c.fetchall()
+        conn.close()
+
         return [
             {
                 "id": row[0],
@@ -91,5 +93,3 @@ class NodeDB:
             }
             for row in rows
         ]
-
-        conn.close()

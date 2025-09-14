@@ -34,5 +34,5 @@ workers:
   - type: weather_forecast
     active: true
     channel_index: 0
-    cron: 0 7,18 * * *
+    cron: 15 8,20 * * *
     dispatch: get_weather_forecast_worker
